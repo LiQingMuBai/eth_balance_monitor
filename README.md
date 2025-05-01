@@ -17,7 +17,6 @@
 
 A Rust-based service that periodically monitors an Ethereum address and automatically transfers any ETH balance (after deducting gas fees) to a specified recipient address.
 
-![Workflow Diagram](https://example.com/path/to/diagram.png) <!-- Add actual diagram if available -->
 
 ## Features
 
