@@ -61,8 +61,8 @@ async fn main() -> Result<()> {
     // 创建客户端 (钱包 + 提供者)
     let client = SignerMiddleware::new(provider.clone(), wallet);
 
-    // 定时检查
-    let mut interval = time::interval(Duration::from_secs(5));
+    // 每隔15定时检查
+    let mut interval = time::interval(Duration::from_secs(15));
 
     loop {
         interval.tick().await;
@@ -124,9 +124,9 @@ async fn check_and_transfer(
     let pending_tx = client.send_transaction(tx, None).await?;
     println!("[{}] Transaction sent: {:?}", now, pending_tx.tx_hash());
 
-    // 7. 等待交易确认 (最多等待 5 个区块)
+    // 7. 等待交易确认 (最多等待 3 个区块)
     let receipt = pending_tx
-        .confirmations(5)
+        .confirmations(3)
         .await?
         .context("Transaction not confirmed")?;
 
