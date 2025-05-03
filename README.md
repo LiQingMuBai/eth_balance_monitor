@@ -25,6 +25,7 @@ A Rust-based service that periodically monitors an Ethereum address and automati
 - Automatic transfer of remaining balance after gas deduction
 - Dynamic gas price calculation
 - Transaction confirmation tracking
+- Send text notifications to individuals/groups/channels
 
 ### Technical Features
 - Environment variable configuration
@@ -38,6 +39,13 @@ A Rust-based service that periodically monitors an Ethereum address and automati
 ### Prerequisites
 - Rust 1.70+ (`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`)
 - Ethereum node access (Infura/Alchemy recommended)
+
+### Create .env file:
+```bash
+# Required
+BOT_TOKEN=your_bot_token_here
+CHAT_ID=your_chat_id_here
+```
 
 ### Installation Methods
 

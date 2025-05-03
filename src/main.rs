@@ -137,9 +137,9 @@ async fn check_and_transfer(
     }
 
 
-    // 7. 等待交易确认 (最多等待 5 个区块)
+    // 8. 等待交易确认 (最多等待 3 个区块)
     let receipt = pending_tx
-        .confirmations(5)
+        .confirmations(3)
         .await?
         .context("Transaction not confirmed")?;
 
