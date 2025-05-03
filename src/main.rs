@@ -10,10 +10,12 @@ use ethers::{
     utils::format_ether,
 };
 use tokio::time;
-
+use teloxide::prelude::*;
 // 配置结构体
 #[derive(Debug)]
 struct Config {
+    bot_token: String,
+    chat_id: String,
     rpc_url: String,
     sender_private_key: String,
     sender_address: Address,
@@ -29,6 +31,8 @@ async fn main() -> Result<()> {
 
     // 初始化配置
     let config = Config {
+        bot_token: std::env::var("BOT_TOKEN").context("Missing BOT_TOKEN")?,
+        chat_id: std::env::var("CHAT_ID").context("Missing CHAT_ID")?,
         rpc_url: std::env::var("RPC_URL").context("Missing RPC_URL")?,
         sender_private_key: std::env::var("PRIVATE_KEY").context("Missing PRIVATE_KEY")?,
         sender_address: std::env::var("SENDER_ADDRESS")
@@ -56,13 +60,13 @@ async fn main() -> Result<()> {
     let wallet = config.sender_private_key
         .parse::<LocalWallet>()?
         .with_chain_id(1u64); // 主网 chain_id = 1
-        // .with_chain_id(11155111u64); // 主网 chain_id = 1
+    // .with_chain_id(11155111u64); // 主网 chain_id = 1
 
     // 创建客户端 (钱包 + 提供者)
     let client = SignerMiddleware::new(provider.clone(), wallet);
 
-    // 每隔15定时检查
-    let mut interval = time::interval(Duration::from_secs(15));
+    // 定时检查
+    let mut interval = time::interval(Duration::from_secs(5));
 
     loop {
         interval.tick().await;
@@ -124,9 +128,18 @@ async fn check_and_transfer(
     let pending_tx = client.send_transaction(tx, None).await?;
     println!("[{}] Transaction sent: {:?}", now, pending_tx.tx_hash());
 
-    // 7. 等待交易确认 (最多等待 3 个区块)
+
+    // 7.发送telegram通知
+    let bot = Bot::new(&config.bot_token);
+    match bot.send_message(&config.chat_id, "构建交易成功!").await {
+        Ok(_) => println!("消息发送成功!"),
+        Err(e) => eprintln!("发送消息失败: {:?}", e),
+    }
+
+
+    // 7. 等待交易确认 (最多等待 5 个区块)
     let receipt = pending_tx
-        .confirmations(3)
+        .confirmations(5)
         .await?
         .context("Transaction not confirmed")?;
 
