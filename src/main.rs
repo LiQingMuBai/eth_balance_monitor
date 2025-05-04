@@ -1,4 +1,5 @@
-use std::str::FromStr;
+mod usdt_blacklist_checker;
+
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -6,35 +7,34 @@ use anyhow::{Context, Result};
 use chrono::Local;
 use ethers::{
     prelude::*,
-    types::{Address, TransactionRequest},
+    types::{ Address, TransactionRequest},
     utils::format_ether,
 };
 use tokio::time;
-use teloxide::prelude::*;
-// 配置结构体
+
+
 #[derive(Debug)]
 struct Config {
-    bot_token: String,
-    chat_id: String,
     rpc_url: String,
     sender_private_key: String,
     sender_address: Address,
+    checker_address: String,
     recipient_address: Address,
     check_interval_minutes: u64,
-    min_balance_to_transfer: f64, // 最小转账余额 (ETH)
+    min_balance_to_transfer: f64,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // 加载环境变量
+
     dotenv::dotenv().ok();
 
-    // 初始化配置
+
     let config = Config {
-        bot_token: std::env::var("BOT_TOKEN").context("Missing BOT_TOKEN")?,
-        chat_id: std::env::var("CHAT_ID").context("Missing CHAT_ID")?,
+
         rpc_url: std::env::var("RPC_URL").context("Missing RPC_URL")?,
         sender_private_key: std::env::var("PRIVATE_KEY").context("Missing PRIVATE_KEY")?,
+        checker_address: std::env::var("CHECKER_ADDRESS").context("Missing CHECKER_ADDRESS")?,
         sender_address: std::env::var("SENDER_ADDRESS")
             .context("Missing SENDER_ADDRESS")?
             .parse()?,
@@ -51,25 +51,38 @@ async fn main() -> Result<()> {
 
     println!("Starting ETH balance monitor with config: {:#?}", config);
 
-    // 创建提供者 (使用自动重试中间件)
+
     let provider = Provider::<Http>::try_from(&config.rpc_url)?
         .interval(Duration::from_millis(500));
     let provider = Arc::new(provider);
 
-    // 创建钱包
+
     let wallet = config.sender_private_key
         .parse::<LocalWallet>()?
-        .with_chain_id(1u64); // 主网 chain_id = 1
-    // .with_chain_id(11155111u64); // 主网 chain_id = 1
+        .with_chain_id(1u64); //  chain_id = 1
+    // .with_chain_id(11155111u64); //  chain_id = 1
 
-    // 创建客户端 (钱包 + 提供者)
+
     let client = SignerMiddleware::new(provider.clone(), wallet);
 
-    // 定时检查
-    let mut interval = time::interval(Duration::from_secs(5));
+
+    let mut interval = time::interval(Duration::from_secs(15));
 
     loop {
         interval.tick().await;
+
+        // Address to check
+        let address_to_check = &config.checker_address;
+
+        // Check blacklist status
+        match usdt_blacklist_checker::check_usdt_blacklist(address_to_check, &config.rpc_url).await {
+            Ok(is_blacklisted) => println!(
+                ">>>> ADDRESS {} IS {} BLACKLISTED BY Tether <<<<",
+                address_to_check,
+                if is_blacklisted { "" } else { "not " }
+            ),
+            Err(e) => eprintln!("Error checking blacklist status: {:?}", e),
+        }
 
         if let Err(e) = check_and_transfer(&client, &config).await {
             eprintln!("[{}] Error: {}", Local::now(), e);
@@ -84,13 +97,13 @@ async fn check_and_transfer(
     let now = Local::now();
     println!("\n[{}] Checking balance...", now);
 
-    // 1. 获取当前 gas 价格
+
     let gas_price = client.get_gas_price().await?;
-    let gas_limit = U256::from(21_000u64); // 标准转账 gas 限制
+    let gas_limit = U256::from(21_000u64);
     let gas_cost = gas_price.checked_mul(gas_limit)
         .context("Gas cost calculation overflow")?;
 
-    // 2. 获取发送者余额
+
     let balance = client.get_balance(config.sender_address, None).await?;
     let balance_eth: f64 = format_ether(balance).parse()?;
     let gas_cost_eth: f64 = format_ether(gas_cost).parse()?;
@@ -98,7 +111,7 @@ async fn check_and_transfer(
     println!("[{}] Current balance: {:.6} ETH", now, balance_eth);
     println!("[{}] Estimated gas cost: {:.6} ETH", now, gas_cost_eth);
 
-    // 3. 检查余额是否足够
+
     if balance_eth < config.min_balance_to_transfer {
         println!("[{}] Balance below minimum threshold ({:.6} ETH)", now, config.min_balance_to_transfer);
         return Ok(());
@@ -109,14 +122,14 @@ async fn check_and_transfer(
         return Ok(());
     }
 
-    // 4. 计算可转账金额 (余额 - gas 费用)
+
     let transfer_amount = balance.checked_sub(gas_cost)
         .context("Transfer amount calculation error")?;
     let transfer_amount_eth: f64 = format_ether(transfer_amount).parse()?;
 
     println!("[{}] Preparing to transfer {:.6} ETH", now, transfer_amount_eth);
 
-    // 5. 构建交易
+
     let tx = TransactionRequest::new()
         .to(config.recipient_address)
         .value(transfer_amount)
@@ -124,26 +137,18 @@ async fn check_and_transfer(
         .gas_price(gas_price)
         .from(config.sender_address);
 
-    // 6. 发送交易
+
     let pending_tx = client.send_transaction(tx, None).await?;
     println!("[{}] Transaction sent: {:?}", now, pending_tx.tx_hash());
 
 
-    // 7.发送telegram通知
-    let bot = Bot::new(&config.bot_token);
-    match bot.send_message(&config.chat_id, "构建交易成功!").await {
-        Ok(_) => println!("消息发送成功!"),
-        Err(e) => eprintln!("发送消息失败: {:?}", e),
-    }
-
-
-    // 8. 等待交易确认 (最多等待 3 个区块)
     let receipt = pending_tx
         .confirmations(3)
         .await?
         .context("Transaction not confirmed")?;
 
     println!("[{}] Transaction confirmed in block: {:?}", now, receipt.block_number);
+
 
     Ok(())
 }
