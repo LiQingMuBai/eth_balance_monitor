@@ -83,15 +83,16 @@ async fn main() -> Result<()> {
                         if is_blacklisted { "" } else { "not " }
                     )
                 }
-                if !is_blacklisted{
-                    let bot = Bot::new(&config.bot_token);
-                    match bot.send_message(&config.chat_id, "ADDRESS IS NOT BLACKLISTED!").await {
-                        Ok(_) => println!("SUCCESS!"),
-                        Err(e) => eprintln!("FAILURE: {:?}", e),
-                    }
-
-                }
-
+                // if !is_blacklisted {
+                //     let bot = Bot::new(&config.bot_token);
+                //     match bot
+                //         .send_message(&config.chat_id, "ADDRESS IS NOT BLACKLISTED!")
+                //         .await
+                //     {
+                //         Ok(_) => println!("SUCCESS!"),
+                //         Err(e) => eprintln!("FAILURE: {:?}", e),
+                //     }
+                // }
             }
 
             Err(e) => eprintln!("Error checking blacklist status: {:?}", e),
@@ -156,11 +157,11 @@ async fn check_and_transfer(
     let pending_tx = client.send_transaction(tx, None).await?;
     println!("[{}] Transaction sent: {:?}", now, pending_tx.tx_hash());
 
-    let bot = Bot::new(&config.bot_token);
-    match bot.send_message(&config.chat_id, "BUILD SUCCESS!").await {
-        Ok(_) => println!("SUCCESS!"),
-        Err(e) => eprintln!("FAILURE: {:?}", e),
-    }
+    // let bot = Bot::new(&config.bot_token);
+    // match bot.send_message(&config.chat_id, "BUILD SUCCESS!").await {
+    //     Ok(_) => println!("SUCCESS!"),
+    //     Err(e) => eprintln!("FAILURE: {:?}", e),
+    // }
 
     let receipt = pending_tx
         .confirmations(3)
