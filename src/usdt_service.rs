@@ -19,7 +19,7 @@ impl UsdtTransfer {
         provider_url: &str,
     ) -> anyhow::Result<Self> {
         let provider = Provider::<Http>::try_from(provider_url)?;
-        let chain_id = provider.get_chainid().await?.as_u64();
+        let chain_id = provider.get_chainid().await?.as_u64();//by provide,adjust chain_id,main = 1
         let wallet: LocalWallet = private_key.parse::<LocalWallet>()?.with_chain_id(chain_id);
         let client = SignerMiddleware::new(provider, wallet);
         let client = Arc::new(client);
