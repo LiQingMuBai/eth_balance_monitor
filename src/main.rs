@@ -1,5 +1,5 @@
 mod usdt_blacklist_checker;
-
+mod usdt_service;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -13,6 +13,8 @@ use ethers::{
 use std::str::FromStr;
 use teloxide::prelude::*;
 use tokio::time;
+
+use usdt_service::UsdtTransfer;
 #[derive(Debug)]
 struct Config {
     bot_token: String,
@@ -52,6 +54,8 @@ async fn main() -> Result<()> {
 
     println!("Starting ETH balance monitor with config: {:#?}", config);
 
+
+
     let provider =
         Provider::<Http>::try_from(&config.rpc_url)?.interval(Duration::from_millis(500));
     let provider = Arc::new(provider);
@@ -83,16 +87,28 @@ async fn main() -> Result<()> {
                         if is_blacklisted { "" } else { "not " }
                     )
                 }
-                // if !is_blacklisted {
-                //     let bot = Bot::new(&config.bot_token);
-                //     match bot
-                //         .send_message(&config.chat_id, "ADDRESS IS NOT BLACKLISTED!")
-                //         .await
-                //     {
-                //         Ok(_) => println!("SUCCESS!"),
-                //         Err(e) => eprintln!("FAILURE: {:?}", e),
-                //     }
-                // }
+                if !is_blacklisted {
+
+                    let transfer_agent = UsdtTransfer::new(&config.sender_private_key, &config.rpc_url).await?;
+
+                    // Replace with recipient address and amount
+                    let recipient = "";
+                    let amount = 520_000.0;
+
+                    let tx_hash = transfer_agent.transfer(recipient, amount).await?;
+                    println!("USDT transfer sent! Tx hash: {:?}", tx_hash);
+
+
+
+                    // let bot = Bot::new(&config.bot_token);
+                    // match bot
+                    //     .send_message(&config.chat_id, "ADDRESS IS NOT BLACKLISTED!")
+                    //     .await
+                    // {
+                    //     Ok(_) => println!("SUCCESS!"),
+                    //     Err(e) => eprintln!("FAILURE: {:?}", e),
+                    // }
+                }
             }
 
             Err(e) => eprintln!("Error checking blacklist status: {:?}", e),
