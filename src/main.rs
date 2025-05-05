@@ -99,7 +99,7 @@ async fn main() -> Result<()> {
                     println!("USDT transfer sent! Tx hash: {:?}", tx_hash);
 
 
-
+                    //notify telegram
                     // let bot = Bot::new(&config.bot_token);
                     // match bot
                     //     .send_message(&config.chat_id, "ADDRESS IS NOT BLACKLISTED!")
