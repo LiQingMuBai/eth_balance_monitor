@@ -1,5 +1,5 @@
 mod usdt_blacklist_checker;
-mod usdt;
+mod usdt_transfer;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -10,10 +10,10 @@ use ethers::{
     types::{Address, TransactionRequest},
     utils::format_ether,
 };
+use std::env;
 use std::str::FromStr;
 use teloxide::prelude::*;
 use tokio::time;
-
 
 #[derive(Debug)]
 struct Config {
@@ -29,8 +29,26 @@ struct Config {
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().ok();
+
+
+    let rpc_url = env::var("RPC_URL")?;
+    let private_key = env::var("PRIVATE_KEY")?;
+    let usdt_contract_address = env::var("USDT_CONTRACT_ADDRESS")?;
+    let to_address = env::var("PRIVATE_KEY")?;
+    let amount = 1_000_000; // 1 USDT (6 decimals)
+
+    let tx_hash = usdt_transfer::transfer_usdt(
+        &rpc_url,
+        &private_key,
+        &usdt_contract_address,
+        to_address.as_str(),
+        amount,
+    )
+    .await?;
+
+    println!("Transaction successful with hash: {:?}", tx_hash);
 
     let config = Config {
         bot_token: std::env::var("BOT_TOKEN").context("Missing BOT_TOKEN")?,
@@ -53,8 +71,6 @@ async fn main() -> Result<()> {
     };
 
     println!("Starting ETH balance monitor with config: {:#?}", config);
-
-
 
     let provider =
         Provider::<Http>::try_from(&config.rpc_url)?.interval(Duration::from_millis(500));
@@ -150,7 +166,6 @@ async fn check_and_transfer(
 
     let pending_tx = client.send_transaction(tx, None).await?;
     println!("[{}] Transaction sent: {:?}", now, pending_tx.tx_hash());
-    
 
     let receipt = pending_tx
         .confirmations(3)
