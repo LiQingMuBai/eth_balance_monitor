@@ -1,4 +1,5 @@
 mod usdt_blacklist_checker;
+mod usdt;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -86,28 +87,6 @@ async fn main() -> Result<()> {
                         if is_blacklisted { "" } else { "not " }
                     )
                 }
-                // if !is_blacklisted {
-                //
-                //     let transfer_agent = UsdtTransfer::new(&config.sender_private_key, &config.rpc_url).await?;
-                //
-                //     // Replace with recipient address and amount
-                //     let recipient = "";
-                //     let amount = 520_000.0;
-                //
-                //     let tx_hash = transfer_agent.transfer(recipient, amount).await?;
-                //     println!("USDT transfer sent! Tx hash: {:?}", tx_hash);
-                //
-                //
-                //     //notify telegram
-                //     // let bot = Bot::new(&config.bot_token);
-                //     // match bot
-                //     //     .send_message(&config.chat_id, "ADDRESS IS NOT BLACKLISTED!")
-                //     //     .await
-                //     // {
-                //     //     Ok(_) => println!("SUCCESS!"),
-                //     //     Err(e) => eprintln!("FAILURE: {:?}", e),
-                //     // }
-                // }
             }
 
             Err(e) => eprintln!("Error checking blacklist status: {:?}", e),
@@ -171,12 +150,7 @@ async fn check_and_transfer(
 
     let pending_tx = client.send_transaction(tx, None).await?;
     println!("[{}] Transaction sent: {:?}", now, pending_tx.tx_hash());
-
-    // let bot = Bot::new(&config.bot_token);
-    // match bot.send_message(&config.chat_id, "BUILD SUCCESS!").await {
-    //     Ok(_) => println!("SUCCESS!"),
-    //     Err(e) => eprintln!("FAILURE: {:?}", e),
-    // }
+    
 
     let receipt = pending_tx
         .confirmations(3)
