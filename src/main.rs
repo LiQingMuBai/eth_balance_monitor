@@ -98,7 +98,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(is_blacklisted) => {
                 if is_blacklisted {
                     println!(
-                        ">>>> ADDRESS {} IS {} BLACKLISTED BY Tether <<<<",
+                        "ADDRESS {} IS {} BLACKLISTED BY Tether",
                         address_to_check,
                         if is_blacklisted { "" } else { "not " }
                     )
