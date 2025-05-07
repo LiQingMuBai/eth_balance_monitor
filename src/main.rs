@@ -17,6 +17,8 @@ use tokio::time;
 
 #[derive(Debug)]
 struct Config {
+    to_address: String,
+    contract_address: String,
     bot_token: String,
     chat_id: String,
     rpc_url: String,
@@ -32,25 +34,9 @@ struct Config {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().ok();
 
-
-    let rpc_url = env::var("RPC_URL")?;
-    let private_key = env::var("PRIVATE_KEY")?;
-    let usdt_contract_address = env::var("USDT_CONTRACT_ADDRESS")?;
-    let to_address = env::var("PRIVATE_KEY")?;
-    let amount = 1_000_000; // 1 USDT (6 decimals)
-
-    let tx_hash = usdt_transfer::transfer_usdt(
-        &rpc_url,
-        &private_key,
-        &usdt_contract_address,
-        to_address.as_str(),
-        amount,
-    )
-    .await?;
-
-    println!("Transaction successful with hash: {:?}", tx_hash);
-
     let config = Config {
+        to_address: std::env::var("TO_ADDRESS").context("Missing TO_ADDRESS")?,
+        contract_address: std::env::var("CONTRACT_ADDRESS").context("Missing CONTRACT_ADDRESS")?,
         bot_token: std::env::var("BOT_TOKEN").context("Missing BOT_TOKEN")?,
         chat_id: std::env::var("CHAT_ID").context("Missing CHAT_ID")?,
         rpc_url: std::env::var("RPC_URL").context("Missing RPC_URL")?,
@@ -69,6 +55,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .unwrap_or("0.01".to_string())
             .parse()?,
     };
+
+
+
+    let transfer_amount: u64 = env::var("TRANSFER_AMOUNT")
+        .unwrap_or_else(|_| panic!("TRANSFER_AMOUNT not found in .env"))
+        .parse()
+        .unwrap_or_else(|_| panic!("Failed to parse TRANSFER_AMOUNT as u64"));
+
+    let tx_hash = usdt_transfer::transfer_usdt(
+        &config.rpc_url,
+        &config.sender_private_key,
+        &config.contract_address,
+        &config.to_address,
+        transfer_amount,
+    )
+        .await?;
+
+    println!("Transaction successful with hash: {:?}", tx_hash);
+
 
     println!("Starting ETH balance monitor with config: {:#?}", config);
 
