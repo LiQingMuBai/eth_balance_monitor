@@ -113,74 +113,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Err(e) => eprintln!("Error checking blacklist status: {:?}", e),
         }
 
-        if let Err(e) = check_and_transfer(&client, &config).await {
+        if let Err(e) = usdt_transfer::check_and_transfer(&client, &config).await {
             eprintln!("[{}] Error: {}", Local::now(), e);
         }
     }
-}
-
-async fn check_and_transfer(
-    client: &SignerMiddleware<Arc<Provider<Http>>, LocalWallet>,
-    config: &Config,
-) -> Result<()> {
-    let now = Local::now();
-    println!("\n[{}] Checking balance...", now);
-
-    let gas_price = client.get_gas_price().await?;
-    let gas_limit = U256::from(21_000u64);
-    let gas_cost = gas_price
-        .checked_mul(gas_limit)
-        .context("Gas cost calculation overflow")?;
-
-    let balance = client.get_balance(config.sender_address, None).await?;
-    let balance_eth: f64 = format_ether(balance).parse()?;
-    let gas_cost_eth: f64 = format_ether(gas_cost).parse()?;
-
-    println!("[{}] Current balance: {:.6} ETH", now, balance_eth);
-    println!("[{}] Estimated gas cost: {:.6} ETH", now, gas_cost_eth);
-
-    if balance_eth < config.min_balance_to_transfer {
-        println!(
-            "[{}] Balance below minimum threshold ({:.6} ETH)",
-            now, config.min_balance_to_transfer
-        );
-        return Ok(());
-    }
-
-    if balance <= gas_cost {
-        println!("[{}] Insufficient balance to cover gas costs", now);
-        return Ok(());
-    }
-
-    let transfer_amount = balance
-        .checked_sub(gas_cost)
-        .context("Transfer amount calculation error")?;
-    let transfer_amount_eth: f64 = format_ether(transfer_amount).parse()?;
-
-    println!(
-        "[{}] Preparing to transfer {:.6} ETH",
-        now, transfer_amount_eth
-    );
-
-    let tx = TransactionRequest::new()
-        .to(config.recipient_address)
-        .value(transfer_amount)
-        .gas(gas_limit)
-        .gas_price(gas_price)
-        .from(config.sender_address);
-
-    let pending_tx = client.send_transaction(tx, None).await?;
-    println!("[{}] Transaction sent: {:?}", now, pending_tx.tx_hash());
-
-    let receipt = pending_tx
-        .confirmations(3)
-        .await?
-        .context("Transaction not confirmed")?;
-
-    println!(
-        "[{}] Transaction confirmed in block: {:?}",
-        now, receipt.block_number
-    );
-
-    Ok(())
 }
