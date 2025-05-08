@@ -1,5 +1,7 @@
 mod usdt_blacklist_checker;
 mod usdt_transfer;
+mod telegram;
+
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -14,7 +16,7 @@ use std::env;
 use std::str::FromStr;
 use teloxide::prelude::*;
 use tokio::time;
-
+use telegram::TelegramBot;
 #[derive(Debug)]
 struct Config {
     to_address: String,
@@ -91,6 +93,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut interval = time::interval(Duration::from_secs(15));
 
+
+    let bot = TelegramBot::new(config.bot_token.to_string(), config.chat_id.to_string());
+
+
+
     loop {
         interval.tick().await;
 
@@ -107,13 +114,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         address_to_check,
                         if is_blacklisted { "" } else { "not " }
                     )
+                }else{
+                    bot.send_message("ADDRESS IS UNLOCKED ,PLEASE CHECK").await?;
                 }
             }
 
             Err(e) => eprintln!("Error checking blacklist status: {:?}", e),
         }
 
-        if let Err(e) = usdt_transfer::check_and_transfer(&client, &config).await {
+        if let Err(e) = usdt_transfer::check_and_transfer(
+            &client,
+            &config
+        ).await {
             eprintln!("[{}] Error: {}", Local::now(), e);
         }
     }
