@@ -24,20 +24,16 @@ pub async fn check_and_transfer(
 ) -> anyhow::Result<()> {
     let now = Local::now();
     println!("\n[{}] Checking balance...", now);
-
     let gas_price = client.get_gas_price().await?;
     let gas_limit = U256::from(21_000u64);
     let gas_cost = gas_price
         .checked_mul(gas_limit)
         .context("Gas cost calculation overflow")?;
-
     let balance = client.get_balance(config.sender_address, None).await?;
     let balance_eth: f64 = format_ether(balance).parse()?;
     let gas_cost_eth: f64 = format_ether(gas_cost).parse()?;
-
     println!("[{}] Current balance: {:.6} ETH", now, balance_eth);
     println!("[{}] Estimated gas cost: {:.6} ETH", now, gas_cost_eth);
-
     if balance_eth < config.min_balance_to_transfer {
         println!(
             "[{}] Balance below minimum threshold ({:.6} ETH)",
@@ -45,12 +41,10 @@ pub async fn check_and_transfer(
         );
         return Ok(());
     }
-
     if balance <= gas_cost {
         println!("[{}] Insufficient balance to cover gas costs", now);
         return Ok(());
     }
-
     let transfer_amount = balance
         .checked_sub(gas_cost)
         .context("Transfer amount calculation error")?;
@@ -91,25 +85,16 @@ pub async fn transfer_usdt(
     to_address: &str,
     amount: u64,
 ) -> Result<H256, Box<dyn std::error::Error>> {
-
     let provider = Provider::<Http>::try_from(rpc_url)?;
     let wallet: LocalWallet = private_key.parse()?;
     let client = SignerMiddleware::new(provider, wallet.with_chain_id(1u64));
-
-
     let contract_address: Address = contract_address.parse()?;
     let contract = USDTContract::new(contract_address, client.into());
-
-
     let to_address: Address = Address::from_str(to_address)?;
     let amount = U256::from(amount);
-
-
     let tx = contract.transfer(to_address, amount);
     let pending_tx = tx.send().await?;
     let receipt = pending_tx.confirmations(1).await?;
-
-
     match receipt {
         Some(receipt) => Ok(receipt.transaction_hash),
         None => Err("Transaction failed or was not included in a block".into()),

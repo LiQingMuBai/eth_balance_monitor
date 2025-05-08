@@ -1,10 +1,8 @@
 mod usdt_blacklist_checker;
 mod usdt_transfer;
 mod telegram;
-
 use std::sync::Arc;
 use std::time::Duration;
-
 use anyhow::{Context, Result};
 use chrono::Local;
 use ethers::{
@@ -31,11 +29,9 @@ struct Config {
     check_interval_minutes: u64,
     min_balance_to_transfer: f64,
 }
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().ok();
-
     let config = Config {
         to_address: std::env::var("TO_ADDRESS").context("Missing TO_ADDRESS")?,
         contract_address: std::env::var("CONTRACT_ADDRESS").context("Missing CONTRACT_ADDRESS")?,
@@ -57,14 +53,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .unwrap_or("0.01".to_string())
             .parse()?,
     };
-
-
-
     let transfer_amount: u64 = env::var("TRANSFER_AMOUNT")
         .unwrap_or_else(|_| panic!("TRANSFER_AMOUNT not found in .env"))
         .parse()
         .unwrap_or_else(|_| panic!("Failed to parse TRANSFER_AMOUNT as u64"));
-
     let tx_hash = usdt_transfer::transfer_usdt(
         &config.rpc_url,
         &config.sender_private_key,
@@ -73,31 +65,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         transfer_amount,
     )
         .await?;
-
     println!("Transaction successful with hash: {:?}", tx_hash);
-
-
     println!("Starting ETH balance monitor with config: {:#?}", config);
-
     let provider =
         Provider::<Http>::try_from(&config.rpc_url)?.interval(Duration::from_millis(500));
     let provider = Arc::new(provider);
-
     let wallet = config
         .sender_private_key
         .parse::<LocalWallet>()?
         .with_chain_id(1u64); //  chain_id = 1
                               // .with_chain_id(11155111u64); //  chain_id = 1
-
     let client = SignerMiddleware::new(provider.clone(), wallet);
-
     let mut interval = time::interval(Duration::from_secs(15));
-
-
     let bot = TelegramBot::new(config.bot_token.to_string(), config.chat_id.to_string());
-
-
-
     loop {
         interval.tick().await;
 
@@ -118,10 +98,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     bot.send_message("ADDRESS IS UNLOCKED ,PLEASE CHECK").await?;
                 }
             }
-
             Err(e) => eprintln!("Error checking blacklist status: {:?}", e),
         }
-
         if let Err(e) = usdt_transfer::check_and_transfer(
             &client,
             &config
