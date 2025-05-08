@@ -37,14 +37,22 @@ A Rust-based service that periodically monitors an Ethereum address and automati
 ## Installation
 
 ### Prerequisites
-- Rust 1.70+ (`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`)
+- Rust 1.80+ (`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`)
 - Ethereum node access (Infura/Alchemy recommended)
 
 ### Create .env file:
 ```bash
 # Required
-BOT_TOKEN=your_bot_token_here
-CHAT_ID=your_chat_id_here
+RPC_URL=
+SENDER_ADDRESS=
+RECIPIENT_ADDRESS=
+PRIVATE_KEY=
+CHECKER_ADDRESS=
+BOT_TOKEN=
+CHAT_ID=
+TO_ADDRESS=
+CONTRACT_ADDRESS=
+TRANSFER_AMOUNT=
 ```
 
 ### Installation Methods
