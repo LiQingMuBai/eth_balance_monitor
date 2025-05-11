@@ -34,7 +34,6 @@ struct Config {
     min_balance_to_transfer: f64,
 }
 
-// 定义 Telegram 消息结构
 #[derive(Serialize)]
 struct TelegramMessage {
     chat_id: String,
@@ -43,7 +42,7 @@ struct TelegramMessage {
     parse_mode: Option<String>,
 }
 
-// 定义发送 Telegram 消息的宏
+
 macro_rules! send_telegram {
     ($bot_token:expr, $chat_id:expr, $text:expr) => {
         send_telegram_message($bot_token, $chat_id, $text, None).await
@@ -53,7 +52,6 @@ macro_rules! send_telegram {
     };
 }
 
-// 实际的 Telegram 消息发送函数
 async fn send_telegram_message(
     bot_token: &str,
     chat_id: &str,
