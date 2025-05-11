@@ -65,8 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         transfer_amount,
     )
         .await?;
-    println!("Transaction successful with hash: {:?}", tx_hash);
-    println!("Starting ETH balance monitor with config: {:#?}", config);
+
     let provider =
         Provider::<Http>::try_from(&config.rpc_url)?.interval(Duration::from_millis(500));
     let provider = Arc::new(provider);
