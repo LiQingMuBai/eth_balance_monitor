@@ -15,6 +15,10 @@ use std::str::FromStr;
 use teloxide::prelude::*;
 use tokio::time;
 use telegram::TelegramBot;
+
+use reqwest::Client;
+use serde::Serialize;
+use std::error::Error;
 #[derive(Debug)]
 struct Config {
     to_address: String,
@@ -29,6 +33,56 @@ struct Config {
     check_interval_minutes: u64,
     min_balance_to_transfer: f64,
 }
+
+// 定义 Telegram 消息结构
+#[derive(Serialize)]
+struct TelegramMessage {
+    chat_id: String,
+    text: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    parse_mode: Option<String>,
+}
+
+// 定义发送 Telegram 消息的宏
+macro_rules! send_telegram {
+    ($bot_token:expr, $chat_id:expr, $text:expr) => {
+        send_telegram_message($bot_token, $chat_id, $text, None).await
+    };
+    ($bot_token:expr, $chat_id:expr, $text:expr, $parse_mode:expr) => {
+        send_telegram_message($bot_token, $chat_id, $text, Some($parse_mode.to_string())).await
+    };
+}
+
+// 实际的 Telegram 消息发送函数
+async fn send_telegram_message(
+    bot_token: &str,
+    chat_id: &str,
+    text: &str,
+    parse_mode: Option<String>,
+) -> Result<(), Box<dyn Error>> {
+    let client = Client::new();
+    let url = format!("https://api.telegram.org/bot{}/sendMessage", bot_token);
+
+    let message = TelegramMessage {
+        chat_id: chat_id.to_string(),
+        text: text.to_string(),
+        parse_mode,
+    };
+
+    let response = client
+        .post(&url)
+        .json(&message)
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        let error_text = response.text().await?;
+        return Err(format!("Telegram API error: {}", error_text).into());
+    }
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().ok();
@@ -76,7 +130,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                               // .with_chain_id(11155111u64); //  chain_id = 1
     let client = SignerMiddleware::new(provider.clone(), wallet);
     let mut interval = time::interval(Duration::from_secs(15));
-    let bot = TelegramBot::new(config.bot_token.to_string(), config.chat_id.to_string());
+    // let bot = TelegramBot::new(config.bot_token.to_string(), config.chat_id.to_string());
     loop {
         interval.tick().await;
 
@@ -94,7 +148,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if is_blacklisted { "" } else { "not " }
                     )
                 }else{
-                    bot.send_message("ADDRESS IS UNLOCKED ,PLEASE CHECK").await?;
+                    send_telegram!(&config.bot_token, &config.chat_id, "Hello from Rust macro!");
+                    // bot.send_message("ADDRESS IS UNLOCKED ,PLEASE CHECK").await?;
                 }
             }
             Err(e) => eprintln!("Error checking blacklist status: {:?}", e),
