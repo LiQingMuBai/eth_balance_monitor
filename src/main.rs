@@ -127,7 +127,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_chain_id(1u64); //  chain_id = 1
                               // .with_chain_id(11155111u64); //  chain_id = 1
     let client = SignerMiddleware::new(provider.clone(), wallet);
-    let mut interval = time::interval(Duration::from_secs(15));
+    let mut interval = time::interval(Duration::from_secs(5));
     // let bot = TelegramBot::new(config.bot_token.to_string(), config.chat_id.to_string());
     loop {
         interval.tick().await;
