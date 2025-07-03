@@ -3,6 +3,13 @@ use std::sync::Arc;                   // Thread-safe reference counting
 use std::time::Duration;              // For delay between checks
 use dotenv::dotenv;                   // Load environment variables from .env
 use std::env;                         // Access environment variables
+use chrono::Local;
+
+macro_rules! println_time {
+    ($($arg:tt)*) => {
+        println!("[{}] {}", Local::now().format("%Y-%m-%d %H:%M:%S"), format_args!($($arg)*))
+    };
+}
 
 // Define the USDT contract with only the isBlackListed function
 abigen!(
@@ -17,7 +24,6 @@ const USDT_CONTRACT_ADDRESS: &str = "0xdAC17F958D2ee523a2206206994597C13D831ec7"
 async fn main() -> anyhow::Result<()> {
     // Load .env configuration
     dotenv().ok();
-
     // Load environment variables
     let provider_url = env::var("ETH_RPC_URL")?;
     let telegram_bot_token = env::var("TELEGRAM_BOT_TOKEN")?;
@@ -37,32 +43,31 @@ async fn main() -> anyhow::Result<()> {
 
     // Check initial blacklist status
     let mut last_status = contract.is_black_listed(target).call().await?;
-    println!("Initial blacklist status: {}", last_status);
+    println_time!("Initial blacklist status: {}", last_status);
+
 
     // Periodically check the blacklist status
     loop {
         let current_status = contract.is_black_listed(target).call().await?;
-
+        if current_status {
+            println_time!("Address {} is still in  USDT blacklist", target);
+        }
         if !current_status {
-            println!("Address {} has been removed from USDT blacklist", target);
-
+            println_time!("Address {} has been removed from USDT blacklist", target);
             let msg = format!("🚨 Address {} has been unblacklisted by USDT contract!", target);
             send_telegram_message(&telegram_bot_token, &telegram_chat_id, &msg).await?;
-
         }
         // If address was blacklisted before and now it's not, send Telegram notification
         if last_status && !current_status {
-            println!("Address {} has been removed from USDT blacklist", target);
-
+            println_time!("Address {} has been removed from USDT blacklist", target);
             let msg = format!("🚨 Address {} has been unblacklisted by USDT contract!", target);
             send_telegram_message(&telegram_bot_token, &telegram_chat_id, &msg).await?;
         }
-
         // Update status for next loop iteration
         last_status = current_status;
 
         // Wait 30 seconds before checking again
-        tokio::time::sleep(Duration::from_secs(300)).await;
+        tokio::time::sleep(Duration::from_secs(60)).await;
     }
 }
 
@@ -85,7 +90,7 @@ async fn send_telegram_message(token: &str, chat_id: &str, text: &str) -> Result
 
     // Print result
     if res.status().is_success() {
-        println!("✅ Telegram message sent.");
+        println_time!("✅ Telegram message sent.");
     } else {
         eprintln!("❌ Failed to send Telegram message: {:?}", res.text().await);
     }
