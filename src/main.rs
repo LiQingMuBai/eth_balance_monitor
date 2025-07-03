@@ -50,7 +50,7 @@ async fn main() -> anyhow::Result<()> {
     loop {
         let current_status = contract.is_black_listed(target).call().await?;
         if current_status {
-            println_time!("Address {} is still in  USDT blacklist", target);
+            println_time!("Address {} remains on USDT's blacklist.", target);
         }
         if !current_status {
             println_time!("Address {} has been removed from USDT blacklist", target);
