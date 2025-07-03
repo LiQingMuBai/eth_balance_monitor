@@ -885,6 +885,7 @@ dependencies = [
  "chrono",
  "dotenv",
  "ethers",
+ "hex",
  "reqwest",
  "serde",
  "serde_json",
