@@ -62,7 +62,7 @@ async fn main() -> anyhow::Result<()> {
         last_status = current_status;
 
         // Wait 30 seconds before checking again
-        tokio::time::sleep(Duration::from_secs(30)).await;
+        tokio::time::sleep(Duration::from_secs(300)).await;
     }
 }
 

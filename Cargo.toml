@@ -1,5 +1,5 @@
 [package]
-name = "eth_balance_monitor"
+name = "eth_blacklist_monitor"
 version = "0.1.0"
 edition = "2021"
 
