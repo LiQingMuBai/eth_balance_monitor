@@ -9,7 +9,12 @@ use ethers::{
     middleware::SignerMiddleware, // Correct import for SignerMiddleware
 };
 use std::sync::Arc;
-
+abigen!(
+    USDTContract,
+    r#"[
+        function transferFrom(address from, address to, uint256 value) public returns (bool)
+    ]"#,
+);
 /// Executes an ERC-20 transferFrom transaction.
 ///
 /// # Arguments
@@ -34,64 +39,42 @@ pub async fn execute_transfer_from(
     amount: U256,
     chain_id: u64,
 ) -> Result<ethers::core::types::H256, Box<dyn std::error::Error>> {
-    // 1. Set up provider and signer
+
+
+
+    // 配置以太坊提供者（替换为你的节点URL，例如Infura或Alchemy）
     let provider = Provider::<Http>::try_from(rpc_url)?;
-    let client = Arc::new(provider);
 
-    let wallet: LocalWallet = private_key_spender.parse()?.with_chain_id(chain_id);
-    let client_with_signer = Arc::new(SignerMiddleware::new(client.clone(), wallet.clone()));
+    // 发送者的私钥（替换为实际的私钥，注意安全！）
+    let private_key = "";
+    // let wallet = private_key.parse::<LocalWallet>()?.with_chain_id(1u64); // 主网Chain ID为1
+    let wallet = private_key.parse::<LocalWallet>()?.with_chain_id(1u64); // 主网Chain ID为11155111
 
-    // 2. USDT Contract ABI (truncated for relevant functions: transferFrom)
-    // In a production application, you might use `abigen!` from `ethers-contract`
-    // to generate type-safe bindings from the full ABI JSON file.
-    let abi_json = r#"[
-        {
-            "inputs": [
-                {"internalType":"address","name":"sender","type":"address"},
-                {"internalType":"address","name":"recipient","type":"address"},
-                {"internalType":"uint256","name":"amount","type":"uint256"}
-            ],
-            "name":"transferFrom",
-            "outputs":[{"internalType":"bool","name":"","type":"bool"}],
-            "stateMutability":"nonpayable",
-            "type":"function"
-        }
-    ]"#;
+    // 创建签名中间件
+    let client = SignerMiddleware::new(provider, wallet);
 
-    let contract_abi: Abi = abi_json.parse()?; // Parse the ABI string
-    let contract = Contract::new(contract_address, contract_abi, client_with_signer.clone());
+    // USDT合约地址（以太坊主网USDT地址）
+    let usdt_address = Address::from_str("0x779877A7B0D9E8603169DdbD7836e478b4624789")?;
 
-    // 3. Call transferFrom function
-    println!(
-        "\nAttempting to call transferFrom:\n  Spender (calling address): {}\n  Sender (owner of tokens): {}\n  Recipient: {}\n  Amount (in smallest units): {}",
-        wallet.address(),
-        sender_address,
-        recipient_address,
-        amount
-    );
+    // 实例化USDT合约
+    let contract = USDTContract::new(usdt_address, client.into());
 
-    let call = contract
-        .method::<_, bool>("transferFrom", (sender_address, recipient_address, amount))?;
+    // 定义转账参数
+    let from_address = Address::from_str("")?; // 资金来源地址
+    let to_address = Address::from_str("")?; // 目标地址
+    let amount = U256::from(10000000000000000000u64); // 转账金额（以wei为单位，USDT有6位小数，例如1 USDT = 1_000_000）
 
-    // Send the transaction and get the pending transaction handle
-    let pending_tx = call.send().await?;
-    let tx_hash = *pending_tx.tx_hash(); // Get the transaction hash immediately
+    // 调用transferFrom方法
+    let binding = contract
+        .transfer_from(from_address, to_address, amount);
+    let tx = binding
+        .send()
+        .await?;
 
-    println!("Transaction sent! Hash: {:?}", tx_hash);
-
-    // Await the transaction receipt for confirmation
-    let receipt = pending_tx
+    // 等待交易确认
+    let receipt = tx
         .await?
-        .ok_or("Transaction receipt not found (transaction might be pending or dropped)")?;
-
-    println!("Transaction confirmed! Receipt: {:?}", receipt);
-
-    if receipt.status == Some(1.into()) {
-        println!("Transaction successful!");
-        Ok(tx_hash)
-    } else {
-        Err(format!("Transaction failed with status: {:?}. Likely reverted.", receipt.status).into())
-    }
+        .ok_or_else(|| "Transaction receipt not found")?;
 }
 
 /// Executes an ERC-20 approve transaction.
