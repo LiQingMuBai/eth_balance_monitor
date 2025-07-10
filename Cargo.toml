@@ -4,7 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ethers = { version = "2.0", features = ["rustls", "ws"] }
+# ethers-rs: The primary library for Ethereum interactions in Rust.
+# "full" feature includes almost everything you'd need, from providers to signers and contracts.
+ethers = { version = "2.0.14" }
+
+# tokio: An asynchronous runtime for Rust. Blockchain interactions are asynchronous.
 tokio = { version = "1.0", features = ["full"] }
 anyhow = "1.0"
 chrono = "0.4"
